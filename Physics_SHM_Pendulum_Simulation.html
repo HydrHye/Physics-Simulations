@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Pendulum Simulation</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #1e3a5f;
+        }
+        .main-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            width: 100%;
+            max-width: 1400px;
+        }
+        .simulation-panel, .controls-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .simulation-panel {
+            flex: 2;
+            min-width: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .controls-panel {
+            flex: 1;
+            min-width: 300px;
+        }
+        #simCanvas {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #fdfdfd;
+        }
+        .graph-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .graph-item {
+             background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .button-group button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #2c5282;
+            color: white;
+            font-size: 16px;
+            margin-right: 10px;
+            transition: background-color 0.2s;
+        }
+        .button-group button:hover {
+            background-color: #1e3a5f;
+        }
+        #aiTutorBox {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e2e8f0;
+            border-radius: 5px;
+            border-left: 5px solid #4a5568;
+        }
+        #aiTutorBox h4 { margin: 0 0 10px 0; }
+        #aiTutorBox p { margin: 0; }
+        .checkbox-group label {
+            display: block;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+        .checkbox-group input {
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Advanced Interactive Pendulum Simulation</h1>
+
+    <div class="main-container">
+        <div class="simulation-panel">
+            <canvas id="simCanvas" width="400" height="400"></canvas>
+        </div>
+        <div class="controls-panel">
+            <h3>Controls</h3>
+            <div class="control-group">
+                <label for="length">Length (L): <span id="lengthValue">1.5</span> m</label>
+                <input type="range" id="length" min="0.5" max="3" step="0.1" value="1.5">
+            </div>
+            <div class="control-group">
+                <label for="gravity">Gravity (g): <span id="gravityValue">9.8</span> m/s²</label>
+                <input type="range" id="gravity" min="1" max="25" step="0.1" value="9.8">
+            </div>
+             <div class="control-group">
+                <label for="mass">Mass (m): <span id="massValue">1.0</span> kg</label>
+                <input type="range" id="mass" min="0.1" max="2" step="0.1" value="1.0">
+            </div>
+            <div class="control-group">
+                <label for="angle">Initial Angle (θ₀): <span id="angleValue">45</span>°</label>
+                <input type="range" id="angle" min="-120" max="120" step="1" value="45">
+            </div>
+             <div class="control-group">
+                <label for="damping">Damping: <span id="dampingValue">0.05</span></label>
+                <input type="range" id="damping" min="0" max="1" step="0.01" value="0.05">
+            </div>
+            <div class="control-group checkbox-group">
+                <hr>
+                <label><input type="checkbox" id="showGridCheck"> Show Grid</label>
+                <label><input type="checkbox" id="slowMotionCheck"> Slow Motion (25%)</label>
+                <hr>
+                <label><input type="checkbox" id="showComponentVectorsCheck" checked> Show Component Forces (T, Fg)</label>
+                <label><input type="checkbox" id="showRestoringVectorCheck"> Show Restoring Force & Displacement</label>
+                <hr>
+            </div>
+            <div class="button-group">
+                <button id="playPauseBtn">Play</button>
+                <button id="resetBtn">Reset</button>
+            </div>
+            <div id="aiTutorBox">
+                <h4>🧠 AI Tutor</h4>
+                <p id="aiMessage">Welcome! The component forces view is now enhanced to show how weight is resolved into vectors.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="graph-container">
+        <div class="graph-item">
+            <canvas id="angleChart"></canvas>
+        </div>
+        <div class="graph-item">
+            <canvas id="velocityChart"></canvas>
+        </div>
+        <div class="graph-item">
+            <canvas id="energyChart"></canvas>
+        </div>
+    </div>
+
+<script>
+    // --- SETUP ---
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    const pixelsPerMeter = 100;
+
+    const lengthSlider = document.getElementById('length');
+    const gravitySlider = document.getElementById('gravity');
+    const massSlider = document.getElementById('mass');
+    const angleSlider = document.getElementById('angle');
+    const dampingSlider = document.getElementById('damping');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const showGridCheck = document.getElementById('showGridCheck');
+    const slowMotionCheck = document.getElementById('slowMotionCheck');
+    const showComponentVectorsCheck = document.getElementById('showComponentVectorsCheck');
+    const showRestoringVectorCheck = document.getElementById('showRestoringVectorCheck');
+
+    const lengthValue = document.getElementById('lengthValue');
+    const gravityValue = document.getElementById('gravityValue');
+    const massValue = document.getElementById('massValue');
+    const angleValue = document.getElementById('angleValue');
+    const dampingValue = document.getElementById('dampingValue');
+    
+    const aiMessage = document.getElementById('aiMessage');
+
+    let state = {
+        L: parseFloat(lengthSlider.value),
+        g: parseFloat(gravitySlider.value),
+        m: parseFloat(massSlider.value),
+        theta: parseFloat(angleSlider.value) * Math.PI / 180,
+        omega: 0,
+        b: parseFloat(dampingSlider.value),
+        theta0: parseFloat(angleSlider.value) * Math.PI / 180,
+        t: 0,
+        lastTime: null,
+        isRunning: false,
+        animationFrameId: null,
+        showGrid: showGridCheck.checked,
+        slowMotion: slowMotionCheck.checked,
+        showComponentVectors: showComponentVectorsCheck.checked,
+        showRestoringVector: showRestoringVectorCheck.checked,
+    };
+
+    let angleChart, velChart, energyChart;
+    const chartTimeWindow = 15;
+
+    // --- PHYSICS & SIMULATION LOGIC ---
+    function getAlpha(theta, omega) { return -(state.g / state.L) * Math.sin(theta) - (state.b / state.m) * omega; }
+    function updatePhysics(dt) { if (dt > 0.1) return; const currentAlpha = getAlpha(state.theta, state.omega); state.theta += state.omega * dt + 0.5 * currentAlpha * dt * dt; const nextAlpha = getAlpha(state.theta, state.omega); state.omega += 0.5 * (currentAlpha + nextAlpha) * dt; }
+    function getEnergyState() { const h = state.L * (1 - Math.cos(state.theta)); const pe = state.m * state.g * h; const v = state.L * state.omega; const ke = 0.5 * state.m * v * v; return { pe, ke, te: pe + ke }; }
+
+    // --- DRAWING & VISUALIZATION ---
+    function drawArrow(fromX, fromY, toX, toY, color, label = "", options = {}) {
+        const { isDashed = false } = options;
+        const headlen = 10;
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+        const angle = Math.atan2(dy, dx);
+        
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+
+        if (isDashed) {
+            ctx.setLineDash([4, 4]);
+        }
+        
+        ctx.beginPath();
+        ctx.moveTo(fromX, fromY);
+        ctx.lineTo(toX, toY);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(toX, toY);
+        ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+        ctx.moveTo(toX, toY);
+        ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+        ctx.stroke();
+
+        ctx.restore();
+
+        if (label) {
+            ctx.fillStyle = color.replace('0.5', '1'); // Make label solid if color is transparent
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            const midX = (fromX + toX) / 2;
+            const midY = (fromY + toY) / 2;
+            const offsetX = -15 * Math.sin(angle);
+            const offsetY = 15 * Math.cos(angle);
+            ctx.fillText(label, midX + offsetX, midY + offsetY);
+        }
+    }
+
+    function drawSystem() {
+        const width = canvas.width;
+        const height = canvas.height;
+        const pivotX = width / 2;
+        const pivotY = 50;
+        
+        const bobRadius = 10 + state.m * 3;
+        const rodLengthPixels = state.L * pixelsPerMeter;
+
+        const bobX = pivotX + rodLengthPixels * Math.sin(state.theta);
+        const bobY = pivotY + rodLengthPixels * Math.cos(state.theta);
+
+        ctx.clearRect(0, 0, width, height);
+
+        if (state.showGrid) { /* Grid logic */ }
+
+        ctx.beginPath(); ctx.moveTo(pivotX, pivotY); ctx.lineTo(bobX, bobY); ctx.strokeStyle = '#4a5568'; ctx.lineWidth = 3; ctx.stroke();
+        ctx.beginPath(); ctx.arc(pivotX, pivotY, 5, 0, 2 * Math.PI); ctx.fillStyle = '#1e3a5f'; ctx.fill();
+        ctx.beginPath(); ctx.arc(bobX, bobY, bobRadius, 0, 2 * Math.PI); ctx.fillStyle = '#2c5282'; ctx.fill();
+
+        const angleDeg = (state.theta * 180 / Math.PI).toFixed(1);
+        ctx.fillStyle = '#333'; ctx.font = '16px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`θ: ${angleDeg}°`, 10, 20);
+        
+        if (state.showComponentVectors) {
+            const vectorScale = 20;
+
+            // Unit vectors for radial and tangential directions
+            const radialX = Math.sin(state.theta);
+            const radialY = Math.cos(state.theta);
+            const tangentX = Math.cos(state.theta);
+            const tangentY = -Math.sin(state.theta);
+            
+            // Weight (Fg) - Reference Vector
+            const Fg_scalar = state.m * state.g;
+            drawArrow(bobX, bobY, bobX, bobY + Fg_scalar * vectorScale, 'rgba(100, 100, 100, 0.5)', 'Weight (Fg)', { isDashed: true });
+
+            // Tension (T)
+            const Ftension_scalar = Fg_scalar * Math.cos(state.theta) + state.m * state.L * state.omega**2;
+            drawArrow(bobX, bobY, bobX - Ftension_scalar * vectorScale * radialX, bobY - Ftension_scalar * vectorScale * radialY, '#3182ce', 'Tension (T)');
+
+            // Perpendicular component of Fg
+            const Fg_perp_scalar = Fg_scalar * Math.cos(state.theta);
+            drawArrow(bobX, bobY, bobX + Fg_perp_scalar * vectorScale * radialX, bobY + Fg_perp_scalar * vectorScale * radialY, '#2ca02c', 'Fg⊥'); // Green
+            
+            // Tangential component of Fg (Restoring Force)
+            const Fg_tan_scalar = -Fg_scalar * Math.sin(state.theta);
+            drawArrow(bobX, bobY, bobX + Fg_tan_scalar * vectorScale * tangentX, bobY + Fg_tan_scalar * vectorScale * tangentY, '#8a2be2', 'Fg∥ (Restoring Force)'); // Purple
+        }
+
+        if (state.showRestoringVector) {
+            const vectorScale = 40;
+            const tangentX = Math.cos(state.theta);
+            const tangentY = -Math.sin(state.theta);
+
+            const s_scalar = state.L * state.theta;
+            drawArrow(bobX, bobY, bobX + s_scalar * vectorScale * tangentX, bobY + s_scalar * vectorScale * tangentY, '#ff8c00', 's (Displacement)');
+
+            const Ft_scalar = -state.m * state.g * Math.sin(state.theta);
+            drawArrow(bobX, bobY, bobX + Ft_scalar * vectorScale * tangentX, bobY + Ft_scalar * vectorScale * tangentY, '#8a2be2', 'Ft (Restoring Force)');
+        }
+    }
+    
+    // --- Charting, Animation, and Event Handlers (Unchanged from previous working version) ---
+    function createCharts() {
+        const commonOptions = { scales: { x: { type: 'linear', position: 'bottom', title: { display: true, text: 'Time (s)' }, min: 0, max: chartTimeWindow }, y: { title: { display: true } } }, plugins: { legend: { display: true } }, elements: { point: { radius: 0 } }, animation: false };
+        angleChart = new Chart(document.getElementById('angleChart'), { type: 'line', data: { datasets: [{ label: 'Angle (rad)', data: [], borderColor: 'rgb(75, 192, 192)', tension: 0.1 }] }, options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, title: { ...commonOptions.scales.y.title, text: 'Angle (rad)'}}}} });
+        velocityChart = new Chart(document.getElementById('velocityChart'), { type: 'line', data: { datasets: [{ label: 'Angular Velocity (rad/s)', data: [], borderColor: 'rgb(255, 99, 132)', tension: 0.1 }] }, options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, title: { ...commonOptions.scales.y.title, text: 'Angular Velocity (rad/s)'}}}} });
+        energyChart = new Chart(document.getElementById('energyChart'), { type: 'line', data: { datasets: [ { label: 'Kinetic Energy', data: [], borderColor: 'rgb(54, 162, 235)', tension: 0.1 }, { label: 'Potential Energy', data: [], borderColor: 'rgb(255, 206, 86)', tension: 0.1 }, { label: 'Total Energy', data: [], borderColor: 'rgb(153, 102, 255)', tension: 0.1 } ]}, options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, title: { ...commonOptions.scales.y.title, text: 'Energy (J)'}}}} });
+    }
+    function updateCharts() { const energy = getEnergyState(); const charts = [angleChart, velocityChart, energyChart]; angleChart.data.datasets[0].data.push({x: state.t, y: state.theta}); velocityChart.data.datasets[0].data.push({x: state.t, y: state.omega}); energyChart.data.datasets[0].data.push({x: state.t, y: energy.ke}); energyChart.data.datasets[1].data.push({x: state.t, y: energy.pe}); energyChart.data.datasets[2].data.push({x: state.t, y: energy.te}); charts.forEach(chart => { if (state.t > chartTimeWindow) { chart.options.scales.x.min = state.t - chartTimeWindow; chart.options.scales.x.max = state.t; } chart.update('none'); }); }
+    function clearCharts() { [angleChart, velocityChart, energyChart].forEach(chart => { chart.data.datasets.forEach(dataset => { dataset.data = []; }); chart.options.scales.x.min = 0; chart.options.scales.x.max = chartTimeWindow; chart.update(); }); }
+    function animate(timestamp) { if (!state.isRunning) return; if (!state.lastTime) state.lastTime = timestamp; let dt = (timestamp - state.lastTime) / 1000; state.lastTime = timestamp; if (state.slowMotion) dt *= 0.25; updatePhysics(dt); state.t += dt; drawSystem(); updateCharts(); state.animationFrameId = requestAnimationFrame(animate); }
+    function handlePlayPause() { state.isRunning = !state.isRunning; playPauseBtn.textContent = state.isRunning ? 'Pause' : 'Play'; if (state.isRunning) { state.lastTime = performance.now(); state.animationFrameId = requestAnimationFrame(animate); } else { cancelAnimationFrame(state.animationFrameId); } }
+    function handleReset() { state.isRunning = false; playPauseBtn.textContent = 'Play'; cancelAnimationFrame(state.animationFrameId); state.t = 0; state.lastTime = null; state.theta = state.theta0; state.omega = 0; drawSystem(); clearCharts(); setAiMessage("System reset. Try the enhanced component forces view!"); }
+    function setAiMessage(message) { aiMessage.textContent = message; }
+    lengthSlider.addEventListener('input', e => { state.L = parseFloat(e.target.value); lengthValue.textContent = state.L.toFixed(1); handleReset(); });
+    gravitySlider.addEventListener('input', e => { state.g = parseFloat(e.target.value); gravityValue.textContent = state.g.toFixed(1); handleReset(); });
+    massSlider.addEventListener('input', e => { state.m = parseFloat(e.target.value); massValue.textContent = state.m.toFixed(1); handleReset(); });
+    angleSlider.addEventListener('input', e => { const degrees = parseFloat(e.target.value); angleValue.textContent = degrees.toFixed(0); state.theta0 = degrees * Math.PI / 180; handleReset(); });
+    dampingSlider.addEventListener('input', e => { state.b = parseFloat(e.target.value); dampingValue.textContent = state.b.toFixed(2); handleReset(); });
+    showGridCheck.addEventListener('change', e => { state.showGrid = e.target.checked; drawSystem(); });
+    slowMotionCheck.addEventListener('change', e => { state.slowMotion = e.target.checked; });
+    showComponentVectorsCheck.addEventListener('change', e => { state.showComponentVectors = e.target.checked; if (e.target.checked) { showRestoringVectorCheck.checked = false; state.showRestoringVector = false; setAiMessage("Showing how weight (Fg) resolves into components. Fg∥ is the restoring force that causes the swing."); } drawSystem(); });
+    showRestoringVectorCheck.addEventListener('change', e => { state.showRestoringVector = e.target.checked; if (e.target.checked) { showComponentVectorsCheck.checked = false; state.showComponentVectors = false; setAiMessage("Showing the net restoring force (Ft) and the displacement (s) from equilibrium."); } drawSystem(); });
+    playPauseBtn.addEventListener('click', handlePlayPause);
+    resetBtn.addEventListener('click', handleReset);
+    window.onload = () => { createCharts(); handleReset(); };
+</script>
+</body>
+</html>
