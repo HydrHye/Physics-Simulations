@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Wave Interference</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .main-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            width: 100%;
+            max-width: 1300px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        }
+        .graph-panel {
+            flex: 3;
+            min-width: 500px;
+        }
+        .controls-panel {
+            flex: 2;
+            min-width: 350px;
+            display: flex;
+            flex-direction: column;
+        }
+        h1, h2, h3 {
+            color: #1e3a5f;
+            text-align: center;
+            margin-top: 0;
+            width: 100%;
+        }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+        #explanationBox {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #edf2f7;
+            border-radius: 8px;
+            border-left: 5px solid #4a5568;
+            transition: all 0.3s;
+        }
+        #explanationBox h4 { margin: 0 0 10px 0; }
+        #explanationBox p { margin: 0; line-height: 1.5; }
+        .wave-controls {
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .wave-controls h3 {
+            text-align: left;
+            margin-top: 0;
+            font-size: 1.1em;
+        }
+        .wave1-title { color: #3182ce; }
+        .wave2-title { color: #e53e3e; }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <h1>Interactive Wave Interference</h1>
+        <div class="graph-panel">
+            <canvas id="waveChart"></canvas>
+        </div>
+        <div class="controls-panel">
+            <h2>Superposition of Waves</h2>
+            
+            <div class="wave-controls">
+                <h3 class="wave1-title">Wave 1 (Blue)</h3>
+                <div class="control-group">
+                    <label>Amplitude: <span id="a1_val">1.0</span></label>
+                    <input type="range" id="a1_slider" min="0" max="2" step="0.1" value="1">
+                </div>
+                <div class="control-group">
+                    <label>Frequency: <span id="b1_val">1.0</span></label>
+                    <input type="range" id="b1_slider" min="0.5" max="3" step="0.1" value="1">
+                </div>
+            </div>
+            
+            <div class="wave-controls">
+                <h3 class="wave2-title">Wave 2 (Red)</h3>
+                <div class="control-group">
+                    <label>Amplitude: <span id="a2_val">1.0</span></label>
+                    <input type="range" id="a2_slider" min="0" max="2" step="0.1" value="1">
+                </div>
+                <div class="control-group">
+                    <label>Frequency: <span id="b2_val">1.0</span></label>
+                    <input type="range" id="b2_slider" min="0.5" max="3" step="0.1" value="1">
+                </div>
+                 <div class="control-group">
+                    <label>Phase Shift: <span id="c2_val">0.00π</span></label>
+                    <input type="range" id="c2_slider" min="0" max="6.28" step="0.01" value="0">
+                </div>
+            </div>
+
+            <div id="explanationBox">
+                <h4>🧠 Interference Explained</h4>
+                <p id="explanationText">Adjust the sliders to see how waves interact. When peaks align with peaks, their amplitudes add up (constructive interference). When peaks align with troughs, they cancel out (destructive interference).</p>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- SETUP: Get all HTML elements ---
+    const a1_slider = document.getElementById('a1_slider');
+    const b1_slider = document.getElementById('b1_slider');
+    const a2_slider = document.getElementById('a2_slider');
+    const b2_slider = document.getElementById('b2_slider');
+    const c2_slider = document.getElementById('c2_slider');
+
+    const a1_val = document.getElementById('a1_val');
+    const b1_val = document.getElementById('b1_val');
+    const a2_val = document.getElementById('a2_val');
+    const b2_val = document.getElementById('b2_val');
+    const c2_val = document.getElementById('c2_val');
+
+    const explanationBox = document.getElementById('explanationBox');
+    const explanationText = document.getElementById('explanationText');
+    const ctx = document.getElementById('waveChart').getContext('2d');
+    let waveChart;
+
+    // Store parameters in objects
+    let wave1_params = { a: 1, b: 1 };
+    let wave2_params = { a: 1, b: 1, c: 0 };
+
+    // --- LOGIC: Functions to generate data and update the chart ---
+    function generateSuperpositionData(p1, p2) {
+        const data1 = [], data2 = [], dataResult = [];
+        const xMin = 0, xMax = 4 * Math.PI;
+        const step = (xMax - xMin) / 500;
+
+        for (let x = xMin; x <= xMax; x += step) {
+            const y1 = p1.a * Math.sin(p1.b * x);
+            const y2 = p2.a * Math.sin(p2.b * x + p2.c);
+            const y_result = y1 + y2;
+            
+            data1.push({x: x, y: y1});
+            data2.push({x: x, y: y2});
+            dataResult.push({x: x, y: y_result});
+        }
+        return { wave1: data1, wave2: data2, resultant: dataResult };
+    }
+    
+    function updateExplanation() {
+        const phase = wave2_params.c % (2 * Math.PI);
+        const tolerance = 0.2; // A small tolerance for near-perfect alignment
+        
+        if (phase < tolerance || Math.abs(phase - 2 * Math.PI) < tolerance) {
+            explanationText.textContent = 'Perfect Constructive Interference. The waves are in phase. Their peaks and troughs align, causing their amplitudes to add together, resulting in a wave with maximum amplitude.';
+            explanationBox.style.borderColor = '#38a169'; // Green
+        } else if (Math.abs(phase - Math.PI) < tolerance) {
+            explanationText.textContent = 'Perfect Destructive Interference. The waves are perfectly out of phase (180° or π radians). Their peaks align with troughs, causing them to cancel each other out.';
+            explanationBox.style.borderColor = '#e53e3e'; // Red
+        } else {
+            explanationText.textContent = 'Partial Interference. The waves are partially in or out of phase, resulting in a new wave with a different amplitude and phase.';
+            explanationBox.style.borderColor = '#4a5568'; // Gray
+        }
+    }
+
+    function updateChart() {
+        const allData = generateSuperpositionData(wave1_params, wave2_params);
+        waveChart.data.datasets[0].data = allData.wave1;
+        waveChart.data.datasets[1].data = allData.wave2;
+        waveChart.data.datasets[2].data = allData.resultant;
+        waveChart.update('none');
+    }
+
+    // --- EVENT LISTENERS: Connect sliders to functions ---
+    a1_slider.addEventListener('input', (e) => { wave1_params.a = parseFloat(e.target.value); a1_val.textContent = wave1_params.a.toFixed(1); updateChart(); updateExplanation(); });
+    b1_slider.addEventListener('input', (e) => { wave1_params.b = parseFloat(e.target.value); b1_val.textContent = wave1_params.b.toFixed(1); updateChart(); updateExplanation(); });
+    a2_slider.addEventListener('input', (e) => { wave2_params.a = parseFloat(e.target.value); a2_val.textContent = wave2_params.a.toFixed(1); updateChart(); updateExplanation(); });
+    b2_slider.addEventListener('input', (e) => { wave2_params.b = parseFloat(e.target.value); b2_val.textContent = wave2_params.b.toFixed(1); updateChart(); updateExplanation(); });
+    c2_slider.addEventListener('input', (e) => { wave2_params.c = parseFloat(e.target.value); c2_val.textContent = `${(wave2_params.c / Math.PI).toFixed(2)}π`; updateChart(); updateExplanation(); });
+    
+
+    // --- INITIALIZATION: Setup the chart when the page loads ---
+    window.onload = () => {
+        const initialData = generateSuperpositionData(wave1_params, wave2_params);
+        updateExplanation();
+
+        waveChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [
+                {
+                    label: 'Wave 1',
+                    data: initialData.wave1,
+                    borderColor: 'rgba(54, 162, 235, 0.5)',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0
+                }, 
+                {
+                    label: 'Wave 2',
+                    data: initialData.wave2,
+                    borderColor: 'rgba(255, 99, 132, 0.5)',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0
+                },
+                {
+                    label: 'Resultant Wave (Superposition)',
+                    data: initialData.resultant,
+                    borderColor: 'rgba(0, 0, 0, 1)',
+                    borderWidth: 3,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 0 },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        title: { display: true, text: 'Position (in radians)' },
+                        min: 0,
+                        max: 4 * Math.PI,
+                    },
+                    y: {
+                        title: { display: true, text: 'Amplitude' },
+                        min: -4.5,
+                        max: 4.5,
+                        grid: {
+                            lineWidth: (context) => (context.tick.value === 0 ? 2 : 1),
+                            color: (context) => (context.tick.value === 0 ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.1)'),
+                        }
+                    }
+                }
+            }
+        });
+    };
+</script>
+</body>
+</html>
