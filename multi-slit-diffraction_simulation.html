@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-M-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Slit Interference Simulation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f9;
+            color: #333;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .simulation-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+        .plot-container {
+            flex: 3;
+            min-width: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .controls-container {
+            flex: 1;
+            min-width: 300px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            padding: 20px;
+        }
+        canvas {
+            width: 100%;
+            border: 1px solid #ddd;
+            background-color: #000; /* Black background for visual clarity of light */
+        }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        .control-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        .control-group input[type="range"] {
+            width: 100%;
+        }
+        .control-group span {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            color: #16a085;
+            float: right;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🔬 Multi-Slit Interference & Diffraction</h1>
+
+    <div class="simulation-container">
+        
+        <div class="plot-container">
+            <canvas id="canvasPattern" width="800" height="100"></canvas>
+            
+            <canvas id="canvasGraph" width="800" height="400" style="background-color: #fff;"></canvas>
+        </div>
+
+        <div class="controls-container">
+            <div class="control-group">
+                <label for="nSlider">N (Number of Slits): <span id="nValue">1</span></label>
+                <input type="range" id="nSlider" min="1" max="10" step="1" value="1">
+            </div>
+
+            <div class="control-group">
+                <label for="aSlider">Slit Width (a): <span id="aValue">5.0e-5</span> m</label>
+                <input type="range" id="aSlider" min="-5.3" max="-4.0" step="0.01" value="-4.30">
+            </div>
+
+            <div class="control-group">
+                <label for="dSlider">Slit Separation (d): <span id="dValue">2.0e-4</span> m</label>
+                <input type="range" id="dSlider" min="-4.7" max="-3.0" step="0.01" value="-3.70">
+            </div>
+
+            <div class="control-group">
+                <label for="lambdaSlider">Wavelength (λ): <span id="lambdaValue">633</span> nm</label>
+                <input type="range" id="lambdaSlider" min="400" max="750" step="1" value="633">
+            </div>
+
+            <div class="control-group">
+                <label for="LSlider">Screen Distance (L): <span id="LValue">1.0</span> m</label>
+                <input type="range" id="LSlider" min="0.5" max="3.0" step="0.1" value="1.0">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            // --- 1. Get DOM Elements ---
+            const sliders = {
+                N: document.getElementById('nSlider'),
+                a: document.getElementById('aSlider'),
+                d: document.getElementById('dSlider'),
+                lambda: document.getElementById('lambdaSlider'),
+                L: document.getElementById('LSlider')
+                // Removed the visualBrightness slider
+            };
+            const values = {
+                N: document.getElementById('nValue'),
+                a: document.getElementById('aValue'),
+                d: document.getElementById('dValue'),
+                lambda: document.getElementById('lambdaValue'),
+                L: document.getElementById('LValue')
+                // Removed the visualBrightness value
+            };
+
+            const canvasPattern = document.getElementById('canvasPattern');
+            const ctxPattern = canvasPattern.getContext('2d');
+            const canvasGraph = document.getElementById('canvasGraph');
+            const ctxGraph = canvasGraph.getContext('2d');
+
+            const graphWidth = canvasGraph.width;
+            const graphHeight = canvasGraph.height;
+            const patternWidth = canvasPattern.width;
+            const patternHeight = canvasPattern.height;
+
+            // --- 2. Physics & Drawing Parameters ---
+            const y_min = -0.05; // Screen half-width in meters
+            const y_max = 0.05;
+            const numPoints = 800; // Resolution of graph (should match canvas width)
+            const y_array = linspace(y_min, y_max, numPoints);
+            
+            // --- NEW: Define the automatic boost factor ---
+            const AUTO_BOOST_FACTOR = 3.0; // Boosts dim fringes (1/3.0 = 0.33 power)
+
+            // --- 3. Helper Functions ---
+            
+            // Generate linearly spaced array
+            function linspace(start, end, num) {
+                const arr = [];
+                const step = (end - start) / (num - 1);
+                for (let i = 0; i < num; i++) {
+                    arr.push(start + i * step);
+                }
+                return arr;
+            }
+
+            // sinc(x) = sin(pi*x) / (pi*x)
+            function sinc(x) {
+                if (Math.abs(x) < 1e-9) {
+                    return 1.0;
+                }
+                return Math.sin(Math.PI * x) / (Math.PI * x);
+            }
+
+            // Wavelength to RGB conversion (simplified for visual purposes)
+            // Accepts a boost factor to non-linearly scale intensity for visibility
+            function wavelengthToRgb(lambda_nm, intensity_factor, brightness_boost = 1.0) {
+                let r = 0, g = 0, b = 0;
+                let s = 1.0; // Saturation / intensity multiplier
+                
+                // Visible spectrum
+                if (lambda_nm >= 380 && lambda_nm < 440) {
+                    r = -(lambda_nm - 440) / (440 - 380);
+                    b = 1.0;
+                } else if (lambda_nm >= 440 && lambda_nm < 490) {
+                    g = (lambda_nm - 440) / (490 - 440);
+                    b = 1.0;
+                } else if (lambda_nm >= 490 && lambda_nm < 510) {
+                    g = 1.0;
+                    b = -(lambda_nm - 510) / (510 - 490);
+                } else if (lambda_nm >= 510 && lambda_nm < 580) {
+                    r = (lambda_nm - 510) / (580 - 510);
+                    g = 1.0;
+                } else if (lambda_nm >= 580 && lambda_nm < 645) {
+                    r = 1.0;
+                    g = -(lambda_nm - 645) / (645 - 580);
+                } else if (lambda_nm >= 645 && lambda_nm <= 780) {
+                    r = 1.0;
+                }
+                
+                // Adjust for spectral power distribution
+                if (lambda_nm > 700) s = 0.3 + 0.7 * (780 - lambda_nm) / (780 - 700);
+                else if (lambda_nm < 420) s = 0.3 + 0.7 * (lambda_nm - 380) / (420 - 380);
+                
+                // Apply visual brightness boost (power law for non-linear visibility)
+                // intensity^(1 / boost_factor)
+                const boosted_intensity = Math.pow(intensity_factor, 1.0 / brightness_boost);
+
+                // Apply intensity factor (clamped 0 to 1)
+                const final_intensity_factor = Math.max(0, Math.min(1, boosted_intensity));
+                
+                return [
+                    Math.floor(r * 255 * s * final_intensity_factor),
+                    Math.floor(g * 255 * s * final_intensity_factor),
+                    Math.floor(b * 255 * s * final_intensity_factor)
+                ];
+            }
+
+
+            // --- 4. Physics Calculation ---
+            function calculateIntensity(N, a, d, lambda, L) {
+                const intensities = [];
+                const envelopes = [];
+                const alphas = []; // Need to store alpha values for the logic
+
+                for (let i = 0; i < numPoints; i++) {
+                    const y = y_array[i];
+                    
+                    // 1. Diffraction Envelope (from slit width 'a')
+                    const alpha = (Math.PI * a * y) / (lambda * L);
+                    const diffraction = Math.pow(sinc(alpha / Math.PI), 2);
+                    
+                    // 2. Interference Fringes (from N slits, separation 'd')
+                    let interference;
+                    if (N === 1) {
+                        interference = 1.0;
+                    } else {
+                        const beta = (Math.PI * d * y) / (lambda * L);
+                        const sinBeta = Math.sin(beta);
+                        
+                        if (Math.abs(sinBeta) < 1e-9) {
+                            interference = 1.0;
+                        } else {
+                            interference = Math.pow(Math.sin(N * beta) / (N * sinBeta), 2);
+                        }
+                    }
+                    
+                    // 3. Total Intensity
+                    const totalIntensity = diffraction * interference;
+                    
+                    intensities.push(totalIntensity);
+                    envelopes.push(diffraction);
+                    alphas.push(alpha); // Store alpha
+                }
+                return { intensities, envelopes, alphas };
+            }
+
+            // --- 5. Main Update & Drawing Function ---
+            function updateSimulation() {
+                // Get values from sliders
+                const N = parseInt(sliders.N.value);
+                const a_log = parseFloat(sliders.a.value);
+                const a = Math.pow(10, a_log);
+                const d_log = parseFloat(sliders.d.value);
+                const d = Math.pow(10, d_log);
+                const lambda_nm = parseInt(sliders.lambda.value);
+                const lambda = lambda_nm * 1e-9; // Convert nm to m
+                const L = parseFloat(sliders.L.value);
+
+                // Update value displays
+                values.N.textContent = N;
+                values.a.textContent = a.toExponential(1);
+                values.d.textContent = d.toExponential(1);
+                values.lambda.textContent = lambda_nm;
+                values.L.textContent = L.toFixed(1);
+
+                // Clear canvases
+                ctxPattern.clearRect(0, 0, patternWidth, patternHeight);
+                ctxGraph.clearRect(0, 0, graphWidth, graphHeight);
+                
+                // Check for physical impossibility
+                if (N > 1 && d < a) {
+                    ctxGraph.fillStyle = 'red';
+                    ctxGraph.font = '20px Arial';
+                    ctxGraph.textAlign = 'center';
+                    ctxGraph.fillText('Error: Slit separation (d) must be > slit width (a)', graphWidth / 2, graphHeight / 2);
+                    return;
+                }
+
+                // Calculate new intensities
+                const { intensities, envelopes, alphas } = calculateIntensity(N, a, d, lambda, L);
+
+                // --- Draw Visual Pattern ---
+                const imageData = ctxPattern.createImageData(patternWidth, patternHeight);
+                for (let x = 0; x < patternWidth; x++) {
+                    const intensity = intensities[x];
+                    const alpha = alphas[x];
+                    
+                    // --- NEW: Automatic Brightness Logic ---
+                    let brightness_boost = 1.0; // Default: no boost
+                    if (N === 1) {
+                        // For single slit, boost everything to see secondary maxima
+                        brightness_boost = AUTO_BOOST_FACTOR;
+                    } else if (Math.abs(alpha) >= Math.PI) {
+                        // For multi-slit, boost only *outside* the central peak
+                        // (i.e., where |alpha| >= pi, the first minimum)
+                        brightness_boost = AUTO_BOOST_FACTOR;
+                    }
+                    // --- End of New Logic ---
+
+                    const [r, g, b] = wavelengthToRgb(lambda_nm, intensity, brightness_boost); 
+                    
+                    for (let y = 0; y < patternHeight; y++) {
+                        const index = (y * patternWidth + x) * 4;
+                        imageData.data[index] = r;
+                        imageData.data[index + 1] = g;
+                        imageData.data[index + 2] = b;
+                        imageData.data[index + 3] = 255; // Alpha
+                    }
+                }
+                ctxPattern.putImageData(imageData, 0, 0);
+
+                // --- Draw Intensity Graph (Remains unchanged, physically accurate) ---
+                const padding = 40;
+                const plotWidth = graphWidth - 2 * padding;
+                const plotHeight = graphHeight - 2 * padding;
+
+                // Draw axes
+                ctxGraph.strokeStyle = '#333';
+                ctxGraph.lineWidth = 1;
+                ctxGraph.beginPath();
+                ctxGraph.moveTo(padding, padding);
+                ctxGraph.lineTo(padding, graphHeight - padding); // Y-axis
+                ctxGraph.lineTo(graphWidth - padding, graphHeight - padding); // X-axis
+                ctxGraph.stroke();
+
+                // Draw labels
+                ctxGraph.fillStyle = '#333';
+                ctxGraph.font = '14px Arial';
+                ctxGraph.textAlign = 'center';
+                ctxGraph.fillText('Position on Screen (y) [m]', graphWidth / 2, graphHeight - padding / 2 + 10);
+                ctxGraph.save();
+                ctxGraph.translate(padding / 2 - 10, graphHeight / 2);
+                ctxGraph.rotate(-Math.PI / 2);
+                ctxGraph.fillText('Normalized Intensity', 0, 0);
+                ctxGraph.restore();
+                
+                // Draw ticks
+                ctxGraph.font = '12px Arial';
+                ctxGraph.fillText("0.0", padding, graphHeight - padding + 15);
+                ctxGraph.fillText("1.0", padding - 15, padding);
+                ctxGraph.fillText(y_min.toFixed(2), padding, graphHeight - padding + 15);
+                ctxGraph.fillText(y_max.toFixed(2), graphWidth - padding, graphHeight - padding + 15);
+
+
+                // Draw Total Intensity (blue)
+                ctxGraph.strokeStyle = 'blue';
+                ctxGraph.lineWidth = 2;
+                ctxGraph.beginPath();
+                for (let i = 0; i < numPoints; i++) {
+                    const x = padding + (i / (numPoints - 1)) * plotWidth;
+                    const y = (graphHeight - padding) - intensities[i] * plotHeight;
+                    if (i === 0) {
+                        ctxGraph.moveTo(x, y);
+                    } else {
+                        ctxGraph.lineTo(x, y);
+                    }
+                }
+                ctxGraph.stroke();
+
+                // Draw Diffraction Envelope (red, dashed)
+                ctxGraph.strokeStyle = 'red';
+                ctxGraph.lineWidth = 1.5;
+                ctxGraph.setLineDash([5, 5]);
+                ctxGraph.beginPath();
+                for (let i = 0; i < numPoints; i++) {
+                    const x = padding + (i / (numPoints - 1)) * plotWidth;
+                    const y = (graphHeight - padding) - envelopes[i] * plotHeight;
+                    if (i === 0) {
+                        ctxGraph.moveTo(x, y);
+                    } else {
+                        ctxGraph.lineTo(x, y);
+                    }
+                }
+                ctxGraph.stroke();
+                ctxGraph.setLineDash([]); // Reset line dash
+                
+                // Draw Legend
+                ctxGraph.fillStyle = 'blue';
+                ctxGraph.fillRect(graphWidth - padding - 100, padding + 10, 20, 10);
+                ctxGraph.fillText('Intensity', graphWidth - padding - 50, padding + 18);
+                
+                ctxGraph.fillStyle = 'red';
+                ctxGraph.fillRect(graphWidth - padding - 100, padding + 30, 20, 10);
+                ctxGraph.fillText('Envelope', graphWidth - padding - 50, padding + 38);
+
+            }
+
+            // --- 6. Event Listeners ---
+            for (let key in sliders) {
+                sliders[key].addEventListener('input', updateSimulation);
+            }
+
+            // Initial draw
+            updateSimulation();
+        };
+    </script>
+
+</body>
+</html>
