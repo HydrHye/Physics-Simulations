@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mindfulpaths | Guided resilience with Dr. Hafsa Hayee</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f8fafc;
+      --primary: #0f172a;
+      --accent: #0ea5e9;
+      --accent-dark: #0369a1;
+      --secondary: #10b981;
+      --muted: #475569;
+      --card-bg: rgba(255, 255, 255, 0.9);
+      --shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+      font-size: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Source Sans 3', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(160deg, #f0f9ff 0%, #f8fafc 50%, #ecfeff 100%);
+      color: var(--primary);
+      line-height: 1.6;
+    }
+
+    header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3.5rem 1.25rem 2rem;
+      text-align: center;
+      gap: 2rem;
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(16, 185, 129, 0.06));
+    }
+
+    header .brand {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    header img.logo {
+      width: 180px;
+      max-width: 60vw;
+      filter: drop-shadow(0 12px 24px rgba(14, 165, 233, 0.3));
+    }
+
+    header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: clamp(2.2rem, 4vw + 1rem, 3.75rem);
+      margin: 0;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    header p.tagline {
+      max-width: 720px;
+      margin: 0;
+      font-size: clamp(1.1rem, 1rem + 1vw, 1.4rem);
+      color: var(--muted);
+    }
+
+    main {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+      display: grid;
+      gap: 3rem;
+    }
+
+    section {
+      background: var(--card-bg);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: clamp(1.75rem, 2vw + 1rem, 2.75rem);
+    }
+
+    section:nth-child(odd) {
+      backdrop-filter: blur(8px);
+    }
+
+    h2 {
+      margin-top: 0;
+      font-family: 'Poppins', sans-serif;
+      font-size: clamp(1.75rem, 1.2rem + 1vw, 2.3rem);
+      margin-bottom: 1rem;
+    }
+
+    .about {
+      display: grid;
+      gap: 2rem;
+    }
+
+    .about-content {
+      display: grid;
+      gap: 1.5rem;
+      align-content: start;
+    }
+
+    .about figure {
+      margin: 0;
+      justify-self: center;
+      background: white;
+      padding: 1rem;
+      border-radius: 16px;
+      box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+    }
+
+    .about figure img {
+      width: min(320px, 80vw);
+      height: auto;
+      border-radius: 14px;
+      display: block;
+    }
+
+    .grid-three {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .grid-three article {
+      padding: 1.5rem;
+      border-radius: 16px;
+      background: white;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    .approach ul {
+      margin: 0;
+      padding-left: 1.2rem;
+    }
+
+    .programs {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .programs a {
+      display: block;
+      text-decoration: none;
+      background: white;
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      color: var(--primary);
+      font-weight: 600;
+      box-shadow: 0 12px 22px rgba(14, 165, 233, 0.12);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .programs a:hover,
+    .programs a:focus {
+      transform: translateY(-4px);
+      box-shadow: 0 18px 26px rgba(14, 165, 233, 0.24);
+      outline: none;
+    }
+
+    .contact {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .contact-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .contact-links a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.1rem;
+      border-radius: 999px;
+      background: var(--primary);
+      color: #f8fafc;
+      text-decoration: none;
+      font-weight: 600;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .contact-links a:hover,
+    .contact-links a:focus {
+      background: var(--accent-dark);
+      transform: translateY(-2px);
+      outline: none;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem 1rem 3rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    @media (min-width: 720px) {
+      .about {
+        grid-template-columns: minmax(0, 1fr) minmax(240px, 1fr);
+        align-items: center;
+      }
+
+      .grid-three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .programs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="assets/mindfulpaths-logo.svg" class="logo" alt="Mindfulpaths logo" />
+      <h1>Mindfulpaths with Dr. Hafsa Hayee</h1>
+    </div>
+    <p class="tagline">Cultivating compassionate resilience and evidence-based mindfulness journeys for individuals and teams committed to living, leading, and healing with intention.</p>
+  </header>
+  <main>
+    <section class="about" aria-labelledby="about-heading">
+      <div class="about-content">
+        <h2 id="about-heading">About Dr. Hafsa Hayee</h2>
+        <p>Dr. Hafsa Hayee is the founder of Mindfulpaths and a physician, educator, and integrative well-being guide. Her work brings together medical training, contemplative practice, and trauma-responsive care to help people navigate stress, burnout, and life transitions with grounded presence.</p>
+        <p>Through Mindfulpaths, Dr. Hayee partners with healthcare systems, universities, and community organizations to co-create spaces where healing-centered leadership can flourish. Her approach amplifies the intersections of neuroscience, compassion science, and practical mindfulness tools, allowing participants to connect with their values while cultivating sustainable habits of care.</p>
+        <p>Rooted in curiosity and cultural humility, Dr. Hayee advocates for accessible wellness education that honors lived experience. She brings warmth, clarity, and a belief in collective resilience to every circle, course, and consultation she facilitates.</p>
+      </div>
+      <figure>
+        <img src="assets/dr-hafsa-hayee-portrait.svg" alt="Illustrated portrait of Dr. Hafsa Hayee" />
+        <figcaption>Dr. Hafsa Hayee, Founder of Mindfulpaths</figcaption>
+      </figure>
+    </section>
+
+    <section aria-labelledby="learn-heading">
+      <h2 id="learn-heading">What You’ll Learn</h2>
+      <div class="grid-three">
+        <article>
+          <h3>Mindfulness in Motion</h3>
+          <p>Embodied practices that integrate breath, gentle movement, and somatic awareness to support regulation and vitality.</p>
+        </article>
+        <article>
+          <h3>Resilience Frameworks</h3>
+          <p>Evidence-informed tools for navigating stress responses, building psychological safety, and sustaining compassionate leadership.</p>
+        </article>
+        <article>
+          <h3>Community Rituals</h3>
+          <p>Guided reflections, storytelling, and shared rituals that deepen connection and affirm interdependence.</p>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="who-heading">
+      <h2 id="who-heading">Who Can Join</h2>
+      <div class="grid-three">
+        <article>
+          <h3>Healthcare Professionals</h3>
+          <p>Clinicians, nurses, and care teams seeking restorative practices that align with trauma-informed care and patient advocacy.</p>
+        </article>
+        <article>
+          <h3>Educators &amp; Students</h3>
+          <p>Academic leaders and learners cultivating resilience, focus, and compassion across classrooms and campus communities.</p>
+        </article>
+        <article>
+          <h3>Community Builders</h3>
+          <p>Organizers, creatives, and wellness facilitators creating supportive ecosystems for collective healing.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="approach" aria-labelledby="approach-heading">
+      <h2 id="approach-heading">Our Approach</h2>
+      <ul>
+        <li><strong>Integrative:</strong> We weave neuroscience, mindfulness, and cultural humility into immersive learning experiences.</li>
+        <li><strong>Trauma-responsive:</strong> Each offering centers safety, choice, and practices that honor the body’s innate wisdom.</li>
+        <li><strong>Collaborative:</strong> Programs are co-designed with partners to meet real-world needs and sustain long-term impact.</li>
+        <li><strong>Evidence-guided:</strong> Research-backed frameworks inform every curriculum, from clinical burnout prevention to leadership coaching.</li>
+      </ul>
+    </section>
+
+    <section class="programs" aria-labelledby="programs-heading">
+      <h2 id="programs-heading">Explore Programs</h2>
+      <p>Mindfulpaths offers flexible formats—from virtual cohorts to in-person immersions—designed to fit your community’s rhythm. Discover a pathway that meets you where you are:</p>
+      <a href="#" aria-label="Learn more about Foundations of Presence program">Foundations of Presence: Six-week introduction to mindfulness, somatic grounding, and compassion practices.</a>
+      <a href="#" aria-label="Learn more about Resilient Teams Lab program">Resilient Teams Lab: Customized workshops that activate psychological safety and shared leadership for care teams.</a>
+      <a href="#" aria-label="Learn more about Integrative Coaching program">Integrative Coaching: One-on-one guidance that bridges science and spirituality to support purpose-driven lives.</a>
+    </section>
+
+    <section class="contact" aria-labelledby="contact-heading">
+      <h2 id="contact-heading">Stay Connected</h2>
+      <p>Ready to collaborate or host a Mindfulpaths experience? Reach out to begin a conversation about how mindful leadership and community care can take root in your setting.</p>
+      <div class="contact-links">
+        <a href="mailto:mindfulpaths@gmail.com">Email Dr. Hafsa Hayee</a>
+        <a href="https://www.linkedin.com/in/hafsahayee" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://orcid.org/0000-0002-1825-0097" target="_blank" rel="noopener">ORCID Profile</a>
+      </div>
+    </section>
+  </main>
+  <footer>
+    <p>&copy; <span id="year"></span> Mindfulpaths. Guided resilience for individuals, teams, and communities.</p>
+  </footer>
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
